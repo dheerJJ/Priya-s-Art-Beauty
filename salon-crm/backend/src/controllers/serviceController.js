@@ -1,5 +1,6 @@
 'use strict';
 const pool = require('../db/pool');
+const { escapeLikeWildcards } = require('../utils/dbUtils');
 
 /**
  * GET /api/services
@@ -24,15 +25,21 @@ async function listServices(req, res, next) {
     }
 
     if (category) {
-      paramCount++;
-      query += ` AND category ILIKE $${paramCount}`;
-      params.push(category);
+      const safeCategory = escapeLikeWildcards(category, 50);
+      if (safeCategory) {
+        paramCount++;
+        query += ` AND category ILIKE $${paramCount}`;
+        params.push(safeCategory);
+      }
     }
 
     if (search) {
-      paramCount++;
-      query += ` AND (name ILIKE $${paramCount} OR category ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
+      const safeSearch = escapeLikeWildcards(search, 100);
+      if (safeSearch) {
+        paramCount++;
+        query += ` AND (name ILIKE $${paramCount} OR category ILIKE $${paramCount})`;
+        params.push(`%${safeSearch}%`);
+      }
     }
 
     query += ' ORDER BY category ASC, name ASC';

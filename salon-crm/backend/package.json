@@ -9,7 +9,9 @@
     "migrate": "node src/db/migrate.js",
     "seed": "node src/db/seed.js",
     "lint": "eslint src --ext .js",
-    "test": "jest --runInBand --forceExit"
+    "test": "jest --runInBand --forceExit",
+    "security": "jest tests/security.test.js --runInBand --forceExit",
+    "db:security": "jest tests/db-security.test.js --runInBand --forceExit"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

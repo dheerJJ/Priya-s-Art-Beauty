@@ -216,7 +216,7 @@ async function migrate() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);`);
     console.log('  [10/12] audit_logs table OK');
 
-    // 012 - Update timestamp trigger function
+    // 012 - Update timestamp trigger function (with explicit search_path)
     await client.query(`
       CREATE OR REPLACE FUNCTION update_updated_at_column()
       RETURNS TRIGGER AS $$
@@ -224,7 +224,9 @@ async function migrate() {
         NEW.updated_at = NOW();
         RETURN NEW;
       END;
-      $$ LANGUAGE plpgsql;
+      $$ LANGUAGE plpgsql
+      SECURITY INVOKER
+      SET search_path = public, pg_temp;
     `);
 
     // Apply triggers to all tables with updated_at

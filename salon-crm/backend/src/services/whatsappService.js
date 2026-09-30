@@ -256,14 +256,17 @@ async function processWebhookStatus(statusUpdate) {
  * Retry sending WhatsApp for a bill.
  */
 async function retryWhatsApp(billId, salonId) {
-  // Increment attempt count
+  // Increment attempt count on the latest message for this bill and salon
   await pool.query(`
     UPDATE whatsapp_messages
     SET attempt_count = attempt_count + 1, status = 'queued', error_message = NULL, updated_at = NOW()
-    WHERE bill_id = $1
-    ORDER BY created_at DESC
-    LIMIT 1
-  `, [billId]);
+    WHERE id = (
+      SELECT id FROM whatsapp_messages
+      WHERE bill_id = $1 AND salon_id = $2
+      ORDER BY created_at DESC
+      LIMIT 1
+    )
+  `, [billId, salonId]);
 }
 
 module.exports = {

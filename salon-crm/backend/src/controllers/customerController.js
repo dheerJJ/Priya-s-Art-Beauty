@@ -3,6 +3,8 @@ const pool = require('../db/pool');
 const logger = require('../utils/logger');
 const { processPhone } = require('../utils/phoneUtils');
 
+const { escapeLikeWildcards } = require('../utils/dbUtils');
+
 /**
  * GET /api/customers
  */
@@ -23,10 +25,12 @@ async function listCustomers(req, res, next) {
     const params = [salonId];
     let paramCount = 1;
 
-    if (search) {
+    const safeSearch = search ? escapeLikeWildcards(search, 100) : null;
+
+    if (safeSearch) {
       paramCount++;
       query += ` AND (c.name ILIKE $${paramCount} OR c.phone ILIKE $${paramCount})`;
-      params.push(`%${search}%`);
+      params.push(`%${safeSearch}%`);
     }
 
     query += ` GROUP BY c.id ORDER BY c.created_at DESC LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}`;
@@ -35,9 +39,9 @@ async function listCustomers(req, res, next) {
     const countQuery = `
       SELECT COUNT(*) FROM customers c
       WHERE c.salon_id = $1
-      ${search ? `AND (c.name ILIKE $2 OR c.phone ILIKE $2)` : ''}
+      ${safeSearch ? `AND (c.name ILIKE $2 OR c.phone ILIKE $2)` : ''}
     `;
-    const countParams = search ? [salonId, `%${search}%`] : [salonId];
+    const countParams = safeSearch ? [salonId, `%${safeSearch}%`] : [salonId];
 
     const [dataResult, countResult] = await Promise.all([
       pool.query(query, params),

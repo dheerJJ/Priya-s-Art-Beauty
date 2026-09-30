@@ -5,6 +5,7 @@ const { calculateBillTotals } = require('../utils/moneyUtils');
 const { generateInvoiceNumber } = require('../services/invoiceNumberService');
 const { generateInvoicePDF } = require('../services/pdfService');
 const { sendWhatsAppInvoice } = require('../services/whatsappService');
+const { escapeLikeWildcards, allowlistIdentifier } = require('../utils/dbUtils');
 
 /**
  * POST /api/bills
@@ -292,8 +293,9 @@ async function listBills(req, res, next) {
     const params = [salonId];
     let pc = 1;
 
-    if (status) {
-      pc++; conditions.push(`b.status = $${pc}`); params.push(status);
+    const safeStatus = allowlistIdentifier(status, ['active', 'cancelled', 'refunded', 'all'], 'active');
+    if (safeStatus && safeStatus !== 'all') {
+      pc++; conditions.push(`b.status = $${pc}`); params.push(safeStatus);
     }
     if (from) {
       pc++; conditions.push(`b.created_at >= $${pc}`); params.push(from);
@@ -301,13 +303,15 @@ async function listBills(req, res, next) {
     if (to) {
       pc++; conditions.push(`b.created_at <= $${pc}`); params.push(to);
     }
-    if (payment_method) {
-      pc++; conditions.push(`b.payment_method = $${pc}`); params.push(payment_method);
+    const safePaymentMethod = allowlistIdentifier(payment_method, ['cash', 'upi', 'card', 'other'], null);
+    if (safePaymentMethod) {
+      pc++; conditions.push(`b.payment_method = $${pc}`); params.push(safePaymentMethod);
     }
-    if (search) {
+    const safeSearch = search ? escapeLikeWildcards(search, 100) : null;
+    if (safeSearch) {
       pc++;
       conditions.push(`(b.invoice_no ILIKE $${pc} OR c.name ILIKE $${pc} OR c.phone ILIKE $${pc})`);
-      params.push(`%${search}%`);
+      params.push(`%${safeSearch}%`);
     }
 
     const whereClause = conditions.join(' AND ');

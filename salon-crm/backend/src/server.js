@@ -23,32 +23,74 @@ const settingsRoutes = require('./routes/settings');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Explicitly disable X-Powered-By
+app.disable('x-powered-by');
+
+// Validate critical environment settings
+function validateEnvironment() {
+  const isProd = process.env.NODE_ENV === 'production';
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret === 'change-this-to-a-secure-random-secret-in-production' || secret.length < 16) {
+    if (isProd) {
+      throw new Error('FATAL: JWT_SECRET must be set to a secure secret in production (at least 16 chars).');
+    } else {
+      logger.warn('SECURITY WARNING: JWT_SECRET is using a default or short development value. Replace with a secure secret in production.');
+    }
+  }
+}
+validateEnvironment();
+
 // ==========================================
 // Security Middleware
 // ==========================================
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'same-origin' },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'"],
+      frameAncestors: ["'none'"],
+      objectSrc: ["'none'"],
+    },
+  },
+  frameguard: { action: 'deny' },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 // CORS
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
+const rawAllowed = [
+  process.env.FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:3001',
-];
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+].filter(Boolean).map(url => url.replace(/\/$/, ''));
+
+const allowedOrigins = Array.from(new Set(rawAllowed));
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    if (!origin) return callback(null, true);
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
     }
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
 }));
 
 // General rate limiting
@@ -67,13 +109,17 @@ app.use('/api', limiter);
 // Webhook needs raw body for HMAC validation
 app.use('/api/webhooks/whatsapp', express.raw({ type: 'application/json' }), (req, res, next) => {
   if (Buffer.isBuffer(req.body)) {
-    req.body = JSON.parse(req.body.toString('utf8'));
+    try {
+      req.body = JSON.parse(req.body.toString('utf8'));
+    } catch {
+      req.body = {};
+    }
   }
   next();
 });
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(compression());
 
 // ==========================================
@@ -83,13 +129,6 @@ app.use(morgan('combined', {
   stream: { write: (msg) => logger.info(msg.trim()) },
   skip: (req) => req.path === '/api/health',
 }));
-
-// ==========================================
-// Static Files (PDF invoices)
-// ==========================================
-app.use('/invoices', express.static(
-  path.resolve(process.env.INVOICE_STORAGE_PATH || path.join(__dirname, '../storage/invoices'))
-));
 
 // ==========================================
 // Health Check

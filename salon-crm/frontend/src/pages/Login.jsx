@@ -111,7 +111,7 @@ export default function Login() {
         <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>
           Don't have an admin account?{' '}
           <Link to="/signup" style={{ color: '#C5A059', fontWeight: 600, textDecoration: 'none' }}>
-            Register Business
+            Sign Up
           </Link>
         </div>
 

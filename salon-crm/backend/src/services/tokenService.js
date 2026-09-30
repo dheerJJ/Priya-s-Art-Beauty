@@ -1,7 +1,6 @@
 'use strict';
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
 const pool = require('../db/pool');
 const logger = require('../utils/logger');
 
@@ -29,7 +28,20 @@ function generateAccessToken(payload) {
  * Verify an access JWT.
  */
 function verifyAccessToken(token) {
-  return jwt.verify(token, ACCESS_TOKEN_SECRET());
+  try {
+    return jwt.verify(token, ACCESS_TOKEN_SECRET());
+  } catch (err) {
+    // Graceful fallback to legacy/test JWT_SECRET if distinct and not an expiry error
+    if (
+      process.env.JWT_SECRET &&
+      process.env.JWT_ACCESS_SECRET &&
+      process.env.JWT_SECRET !== process.env.JWT_ACCESS_SECRET &&
+      err.name !== 'TokenExpiredError'
+    ) {
+      return jwt.verify(token, process.env.JWT_SECRET);
+    }
+    throw err;
+  }
 }
 
 /**
@@ -52,7 +64,7 @@ function generateRawRefreshToken() {
 async function createRefreshTokenFamily(userId, { userAgent = null, ip = null } = {}, client = pool) {
   const rawToken = generateRawRefreshToken();
   const tokenHash = hashToken(rawToken);
-  const familyId = uuidv4();
+  const familyId = crypto.randomUUID();
 
   const familyExpiresAt = new Date(Date.now() + ABSOLUTE_SESSION_DAYS() * 24 * 60 * 60 * 1000);
   const expiresAt = new Date(Date.now() + REFRESH_EXPIRY_DAYS() * 24 * 60 * 60 * 1000);

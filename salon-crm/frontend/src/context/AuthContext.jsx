@@ -17,6 +17,16 @@ export function AuthProvider({ children }) {
     } catch (_) {}
 
     async function restoreSession() {
+      // Check if a session was previously established before attempting silent restore.
+      // This prevents unnecessary 401 console noise on first visit or when logged out.
+      const hasSession = localStorage.getItem('has_session') === 'true'
+      if (!hasSession) {
+        if (isMounted) {
+          setLoading(false)
+        }
+        return
+      }
+
       try {
         const res = await api.post('/auth/refresh')
         if (isMounted && res.data?.data) {
@@ -26,6 +36,9 @@ export function AuthProvider({ children }) {
         }
       } catch (_) {
         // No active refresh session or invalid token
+        try {
+          localStorage.removeItem('has_session')
+        } catch (_) {}
         if (isMounted) {
           setAccessToken(null)
           setUser(null)
@@ -50,6 +63,9 @@ export function AuthProvider({ children }) {
     // Access token kept in memory only (never localStorage)
     setAccessToken(token)
     setUser(userData)
+    try {
+      localStorage.setItem('has_session', 'true')
+    } catch (_) {}
     return userData
   }
 
@@ -59,6 +75,9 @@ export function AuthProvider({ children }) {
     // Access token kept in memory only (never localStorage)
     setAccessToken(token)
     setUser(userData)
+    try {
+      localStorage.setItem('has_session', 'true')
+    } catch (_) {}
     return userData
   }
 
@@ -70,6 +89,9 @@ export function AuthProvider({ children }) {
     } finally {
       setAccessToken(null)
       setUser(null)
+      try {
+        localStorage.removeItem('has_session')
+      } catch (_) {}
     }
   }
 
@@ -81,6 +103,9 @@ export function AuthProvider({ children }) {
     } finally {
       setAccessToken(null)
       setUser(null)
+      try {
+        localStorage.removeItem('has_session')
+      } catch (_) {}
     }
   }
 

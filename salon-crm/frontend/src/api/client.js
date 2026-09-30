@@ -91,6 +91,7 @@ api.interceptors.response.use(
         try {
           localStorage.removeItem('token')
           localStorage.removeItem('user')
+          localStorage.removeItem('has_session')
         } catch (_) {}
 
         // Redirect to login only if not already on public/auth pages

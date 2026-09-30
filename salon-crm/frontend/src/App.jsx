@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
 import Login from './pages/Login'
+import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import Billing from './pages/Billing'
 import BillHistory from './pages/BillHistory'
@@ -36,6 +37,8 @@ export default function App() {
         />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/register" element={<Signup />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsAndConditions />} />
 

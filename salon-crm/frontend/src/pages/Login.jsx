@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import toast from 'react-hot-toast'
 
@@ -108,7 +108,14 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+        <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>
+          Don't have an admin account?{' '}
+          <Link to="/signup" style={{ color: '#C5A059', fontWeight: 600, textDecoration: 'none' }}>
+            Register Business
+          </Link>
+        </div>
+
+        <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
           <a href="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'none', marginRight: 14 }}>Privacy Policy</a>
           <a href="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms & Conditions</a>
         </div>

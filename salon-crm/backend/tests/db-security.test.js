@@ -11,7 +11,19 @@ describe('Database Security & SQL Injection Hardening Test Suite', () => {
   const salon1Id = 1;
   const salon2Id = 999;
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    // Seed test fixtures so authenticated tests work even on empty/cleared databases
+    await pool.query(`
+      INSERT INTO salons (id, name, invoice_prefix, currency, tax_rate)
+      VALUES (1, 'Test Salon 1', 'TEST', 'INR', 0)
+      ON CONFLICT (id) DO NOTHING
+    `);
+    await pool.query(`
+      INSERT INTO users (id, name, email, password_hash, role, salon_id, is_active)
+      VALUES (1, 'Test Admin', 'testadmin@example.com', '$2a$12$e80yZ1/X/VnN96rX6tAeu.vC0t6d5Ew4Y.a5Q6r7S8T9U0V1W2X3Y', 'admin', 1, true)
+      ON CONFLICT (id) DO NOTHING
+    `);
+
     // Generate test JWTs for two distinct tenants to test cross-tenant isolation (IDOR)
     const secret = process.env.JWT_SECRET || 'test_jwt_secret_must_be_long_enough_for_security';
     salon1Token = jwt.sign(

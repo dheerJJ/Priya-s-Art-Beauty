@@ -93,6 +93,33 @@ describe('Security Hardening Test Suite', () => {
 
       expect(res.status).toBe(422);
     });
+
+    it('should reject admin registration with short password with 422', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test Admin',
+          salonName: 'Test Academy',
+          email: 'admin@test.com',
+          password: 'short',
+        });
+
+      expect(res.status).toBe(422);
+      expect(res.body.errors).toBeDefined();
+    });
+
+    it('should reject admin registration with missing salon name with 422', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Test Admin',
+          salonName: '',
+          email: 'admin@test.com',
+          password: 'SecurePassword123',
+        });
+
+      expect(res.status).toBe(422);
+    });
   });
 
   describe('G. Webhook HMAC Signature Validation', () => {

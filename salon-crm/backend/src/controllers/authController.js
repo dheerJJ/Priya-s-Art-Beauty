@@ -122,4 +122,92 @@ async function changePassword(req, res, next) {
   }
 }
 
-module.exports = { login, getMe, changePassword };
+/**
+ * POST /api/auth/register
+ * Admin registration with new salon creation.
+ */
+async function register(req, res, next) {
+  const client = await pool.connect();
+  try {
+    const { name, email, password, salonName, phone } = req.body;
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check if email already in use
+    const existing = await client.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'An account with this email already exists' });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Generate an invoice prefix from the salon name (up to 6 uppercase alphanumeric chars)
+    const rawPrefix = (salonName || 'SALON').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const invoicePrefix = rawPrefix.slice(0, 6) || 'SALON';
+
+    // 2. Insert new salon
+    const salonResult = await client.query(`
+      INSERT INTO salons (name, phone, email, invoice_prefix, currency, tax_rate)
+      VALUES ($1, $2, $3, $4, 'INR', 0)
+      RETURNING id, name, invoice_prefix, currency
+    `, [salonName.trim(), phone ? phone.trim() : null, cleanEmail, invoicePrefix]);
+
+    const salon = salonResult.rows[0];
+
+    // 3. Hash password with bcrypt
+    const hash = await bcrypt.hash(password, 12);
+
+    // 4. Create admin user
+    const userResult = await client.query(`
+      INSERT INTO users (name, email, password_hash, role, salon_id, is_active)
+      VALUES ($1, $2, $3, 'admin', $4, true)
+      RETURNING id, name, email, role, salon_id, created_at
+    `, [name.trim(), cleanEmail, hash, salon.id]);
+
+    const user = userResult.rows[0];
+
+    // 5. Initialize invoice sequence
+    await client.query(`
+      INSERT INTO invoice_sequences (salon_id, year, last_seq)
+      VALUES ($1, EXTRACT(YEAR FROM NOW())::INT, 0)
+      ON CONFLICT (salon_id) DO NOTHING
+    `, [salon.id]);
+
+    // 6. Record audit log
+    await client.query(`
+      INSERT INTO audit_logs (salon_id, user_id, action, entity_type, ip_address)
+      VALUES ($1, $2, 'admin_registered', 'user', $3)
+    `, [salon.id, user.id, req.ip]);
+
+    await client.query('COMMIT');
+
+    // Generate JWT
+    const token = jwt.sign(
+      { userId: user.id, role: user.role, salonId: user.salon_id },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Admin account and salon created successfully',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          salon_id: user.salon_id,
+          salon_name: salon.name,
+        },
+      },
+    });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore rollback error */ }
+    next(err);
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { login, register, getMe, changePassword };

@@ -47,7 +47,10 @@ async function handleWebhook(req, res) {
         .update(bodyStr)
         .digest('hex');
 
-      if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+      const sigBuf = Buffer.from(signature);
+      const expBuf = Buffer.from(expectedSig);
+
+      if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
         logger.warn('Invalid webhook signature - possible spoofing attempt');
         return;
       }

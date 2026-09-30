@@ -152,7 +152,7 @@ function buildMessageBody(billData, toPhone) {
     type: 'text',
     text: {
       preview_url: false,
-      body: `Hello ${customer_name || 'Valued Customer'},\n\nThank you for visiting ${salon_name || 'our salon'}! 💇\n\nYour invoice details:\n• Invoice No: ${invoice_no}\n• Total Amount: ${totalFormatted}\n• Payment: ${payMethod}\n\nYour invoice PDF has been generated. Please visit us again!\n\n_${salon_name || 'Salon'}_`,
+      body: `Hello ${customer_name || 'Valued Customer'},\n\nThank you for visiting ${salon_name || 'our salon'}!\n\nYour invoice details:\n• Invoice No: ${invoice_no}\n• Total Amount: ${totalFormatted}\n• Payment: ${payMethod}\n\nYour invoice PDF has been generated. Please visit us again!\n\n_${salon_name || 'Salon'}_`,
     },
   };
 }

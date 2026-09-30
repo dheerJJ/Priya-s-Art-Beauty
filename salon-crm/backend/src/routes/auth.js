@@ -46,7 +46,6 @@ router.post('/register',
   registerLimiter,
   [
     body('name').trim().isLength({ min: 2, max: 100 }).withMessage('Admin name must be between 2 and 100 characters'),
-    body('salonName').trim().isLength({ min: 2, max: 150 }).withMessage('Salon / business name must be between 2 and 150 characters'),
     body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     body('phone').optional({ checkFalsy: true }).trim().isLength({ min: 7, max: 20 }).withMessage('Phone must be a valid contact number'),

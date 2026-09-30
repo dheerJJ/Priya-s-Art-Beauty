@@ -135,21 +135,23 @@ async function register(req, res, next) {
     // Check if email already in use
     const existing = await client.query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
     if (existing.rows.length > 0) {
+      client.release();
       return res.status(409).json({ success: false, message: 'An account with this email already exists' });
     }
 
     await client.query('BEGIN');
 
-    // 1. Generate an invoice prefix from the salon name (up to 6 uppercase alphanumeric chars)
-    const rawPrefix = (salonName || 'SALON').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-    const invoicePrefix = rawPrefix.slice(0, 6) || 'SALON';
+    // 1. Generate an invoice prefix from the salon name (default to Priya's Art Beauty & Makeup Academy)
+    const effectiveSalonName = (salonName && salonName.trim()) ? salonName.trim() : "Priya's Art Beauty & Makeup Academy";
+    const rawPrefix = (salonName || 'PRIYA').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const invoicePrefix = rawPrefix.slice(0, 6) || 'PRIYA';
 
     // 2. Insert new salon
     const salonResult = await client.query(`
       INSERT INTO salons (name, phone, email, invoice_prefix, currency, tax_rate)
       VALUES ($1, $2, $3, $4, 'INR', 0)
       RETURNING id, name, invoice_prefix, currency
-    `, [salonName.trim(), phone ? phone.trim() : null, cleanEmail, invoicePrefix]);
+    `, [effectiveSalonName, phone ? phone.trim() : null, cleanEmail, invoicePrefix]);
 
     const salon = salonResult.rows[0];
 
@@ -204,9 +206,12 @@ async function register(req, res, next) {
     });
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) { /* ignore rollback error */ }
+    if (err.code === '23505') {
+      return res.status(409).json({ success: false, message: 'An account with this email already exists' });
+    }
     next(err);
   } finally {
-    client.release();
+    try { client.release(); } catch (_) { /* ignore already released */ }
   }
 }
 

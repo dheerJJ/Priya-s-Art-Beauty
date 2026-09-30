@@ -99,7 +99,6 @@ describe('Security Hardening Test Suite', () => {
         .post('/api/auth/register')
         .send({
           name: 'Test Admin',
-          salonName: 'Test Academy',
           email: 'admin@test.com',
           password: 'short',
         });
@@ -108,17 +107,61 @@ describe('Security Hardening Test Suite', () => {
       expect(res.body.errors).toBeDefined();
     });
 
-    it('should reject admin registration with missing salon name with 422', async () => {
+    it('should reject admin registration with invalid email format with 422', async () => {
       const res = await request(app)
         .post('/api/auth/register')
         .send({
           name: 'Test Admin',
-          salonName: '',
-          email: 'admin@test.com',
+          email: 'invalid-email-format',
           password: 'SecurePassword123',
         });
 
       expect(res.status).toBe(422);
+      expect(res.body.errors).toBeDefined();
+    });
+
+    it('should neutralize SQL injection payloads during admin registration', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: "Admin'; DROP TABLE users; --",
+          email: 'sql-test@example.com',
+          password: 'SecurePassword123',
+          phone: "919876543210' OR '1'='1",
+        });
+
+      // Handled safely via parameterized queries without SQL syntax error or 500
+      expect(res.status).not.toBe(500);
+      if (res.status === 201) {
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.token).toBeDefined();
+      }
+    });
+
+    it('should prevent duplicate email registration with HTTP 409', async () => {
+      const dupEmail = 'duplicate-admin@example.com';
+      // First registration
+      const res1 = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'First Admin',
+          email: dupEmail,
+          password: 'SecurePassword123',
+        });
+      expect([201, 409]).toContain(res1.status);
+
+      // Attempt second registration with same email
+      const res2 = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Second Admin',
+          email: dupEmail,
+          password: 'SecurePassword123',
+        });
+
+      expect(res2.status).toBe(409);
+      expect(res2.body.success).toBe(false);
+      expect(res2.body.message).toContain('already exists');
     });
   });
 

@@ -6,7 +6,6 @@ import toast from 'react-hot-toast'
 export default function Signup() {
   const [formData, setFormData] = useState({
     name: '',
-    salonName: '',
     email: '',
     phone: '',
     password: '',
@@ -25,9 +24,9 @@ export default function Signup() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const { name, salonName, email, phone, password, confirmPassword } = formData
+    const { name, email, phone, password, confirmPassword } = formData
 
-    if (!name.trim() || !salonName.trim() || !email.trim() || !password) {
+    if (!name.trim() || !email.trim() || !password) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -46,12 +45,11 @@ export default function Signup() {
     try {
       await register({
         name: name.trim(),
-        salonName: salonName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim() || undefined,
         password,
       })
-      toast.success('Admin account and business registered successfully!')
+      toast.success('Admin account registered successfully!')
       navigate('/', { replace: true })
     } catch (err) {
       const msg = err.response?.data?.message || 'Registration failed. Please check your details.'
@@ -83,29 +81,11 @@ export default function Signup() {
             Create Admin Account
           </h1>
           <p className="login-subtitle" style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>
-            Register your salon and manage billing, staff, and customer invoices
+            Register your administrator account to manage billing and services
           </p>
         </div>
 
         <form onSubmit={handleSubmit} id="signup-form">
-          <div className="form-group">
-            <label className="form-label" htmlFor="salonName">
-              Salon or Academy Name <span style={{ color: '#ef4444' }}>*</span>
-            </label>
-            <input
-              id="salonName"
-              name="salonName"
-              type="text"
-              className="form-control"
-              placeholder="e.g. Priya's Art Beauty & Makeup Academy"
-              value={formData.salonName}
-              onChange={handleChange}
-              disabled={loading}
-              autoFocus
-              required
-            />
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div className="form-group">
               <label className="form-label" htmlFor="name">
@@ -120,6 +100,7 @@ export default function Signup() {
                 value={formData.name}
                 onChange={handleChange}
                 disabled={loading}
+                autoFocus
                 required
               />
             </div>

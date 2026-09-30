@@ -191,34 +191,44 @@ async function updateStaff(req, res, next) {
   }
 }
 
+function maskPhoneNumber(phone) {
+  if (!phone) return '+91 98XXX XX123';
+  const clean = String(phone).trim();
+  const digits = clean.replace(/\D/g, '');
+  if (digits.length >= 10) {
+    const last3 = digits.slice(-3);
+    const country = digits.length > 10 ? `+${digits.slice(0, digits.length - 10)} ` : '+91 ';
+    const prefix = digits.length > 10 ? digits.slice(-10, -8) : digits.slice(0, 2);
+    return `${country}${prefix}XXX XX${last3}`;
+  }
+  return '+91 98XXX XX123';
+}
+
 /**
  * GET /api/settings/whatsapp-status
+ * Strictly returns only connected (boolean) and masked phone_number.
+ * Never exposes tokens, secrets, or internal IDs.
  */
 async function getWhatsAppStatus(req, res, next) {
   try {
     const { isWhatsAppConfigured } = require('../services/whatsappService');
-    const configured = isWhatsAppConfigured();
+    const connected = isWhatsAppConfigured();
 
-    const salonRes = await pool.query(
-      'SELECT whatsapp_enabled FROM salons WHERE id = $1',
-      [req.salonId]
-    );
-
-    // Recent WA messages
-    const msgRes = await pool.query(`
-      SELECT status, COUNT(*) as count
-      FROM whatsapp_messages WHERE salon_id = $1
-      GROUP BY status
-    `, [req.salonId]);
+    let maskedNumber = null;
+    if (connected) {
+      const salonRes = await pool.query(
+        'SELECT phone FROM salons WHERE id = $1',
+        [req.salonId]
+      );
+      const rawNumber = process.env.WHATSAPP_BUSINESS_PHONE_NUMBER || salonRes.rows[0]?.phone;
+      maskedNumber = maskPhoneNumber(rawNumber);
+    }
 
     return res.json({
       success: true,
       data: {
-        configured,
-        enabled: salonRes.rows[0]?.whatsapp_enabled || false,
-        phone_number_id_set: !!process.env.WHATSAPP_PHONE_NUMBER_ID,
-        message_stats: msgRes.rows,
-        webhook_url: `${process.env.PUBLIC_API_URL}/api/webhooks/whatsapp`,
+        connected,
+        phone_number: maskedNumber,
       },
     });
   } catch (err) {
@@ -226,4 +236,62 @@ async function getWhatsAppStatus(req, res, next) {
   }
 }
 
-module.exports = { getSalonSettings, updateSalonSettings, listStaff, createStaff, updateStaff, getWhatsAppStatus };
+/**
+ * POST /api/settings/whatsapp-test
+ * Sends a test WhatsApp notification (Admin only).
+ */
+async function sendTestWhatsAppMessage(req, res, next) {
+  try {
+    const { isWhatsAppConfigured, sendTestMessage } = require('../services/whatsappService');
+    if (!isWhatsAppConfigured()) {
+      return res.status(400).json({
+        success: false,
+        message: 'WhatsApp is not connected yet. Please contact support to activate this feature.',
+      });
+    }
+
+    const salonRes = await pool.query(
+      'SELECT name, phone FROM salons WHERE id = $1',
+      [req.salonId]
+    );
+    const salon = salonRes.rows[0];
+
+    const recipient = req.body.phone || salon?.phone;
+    if (!recipient) {
+      return res.status(400).json({
+        success: false,
+        message: 'A recipient phone number is required to send a test message.',
+      });
+    }
+
+    const result = await sendTestMessage({
+      recipientPhone: recipient,
+      salonName: salon?.name,
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.error || 'Failed to send test message.',
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Test message sent successfully.',
+      data: { messageId: result.messageId },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  getSalonSettings,
+  updateSalonSettings,
+  listStaff,
+  createStaff,
+  updateStaff,
+  getWhatsAppStatus,
+  sendTestWhatsAppMessage,
+};

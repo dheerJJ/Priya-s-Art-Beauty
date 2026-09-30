@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../api/client'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/useAuth'
+import SUPPORT_CONFIG from '../config/support'
 
 export default function Settings() {
   const { isAdmin } = useAuth()
@@ -19,6 +20,8 @@ export default function Settings() {
 
   // WhatsApp
   const [waStatus, setWaStatus] = useState(null)
+  const [testPhone, setTestPhone] = useState('')
+  const [sendingTest, setSendingTest] = useState(false)
 
   useEffect(() => {
     loadSalon()
@@ -49,6 +52,20 @@ export default function Settings() {
       const res = await api.get('/settings/whatsapp-status')
       setWaStatus(res.data.data)
     } catch {}
+  }
+
+  async function handleSendTestMessage(e) {
+    if (e) e.preventDefault()
+    setSendingTest(true)
+    try {
+      const res = await api.post('/settings/whatsapp-test', { phone: testPhone || undefined })
+      toast.success(res.data.message || 'Test message sent successfully')
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to send test message'
+      toast.error(msg)
+    } finally {
+      setSendingTest(false)
+    }
   }
 
   async function saveSalon(e) {
@@ -249,67 +266,68 @@ export default function Settings() {
         </div>
       )}
 
-      {/* WhatsApp Config */}
+      {/* WhatsApp Config (Admin Only) */}
       {tab === 'whatsapp' && isAdmin && (
         <div className="card">
           <div className="card-header">
             <span className="card-title">WhatsApp Integration</span>
-            <span className={`badge ${waStatus?.configured ? 'badge-success' : 'badge-danger'}`}>
-              {waStatus?.configured ? 'Configured' : 'Not Configured'}
+            <span className={`badge ${waStatus?.connected ? 'badge-success' : 'badge-neutral'}`}>
+              {waStatus?.connected ? 'Connected' : 'Not Connected'}
             </span>
           </div>
           <div className="card-body">
-            {waStatus?.configured ? (
+            {waStatus?.connected ? (
               <div>
-                <div className="alert alert-success">
-                  WhatsApp Business API is connected and ready to send invoices.
+                <div className="alert alert-success" style={{ marginBottom: 20 }}>
+                  WhatsApp Business API is connected and active for automated billing messages.
                 </div>
-                <div style={{ marginBottom: 20 }}>
-                  <label className="form-label">Webhook URL (set in Meta Developer Console)</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input className="form-control monospace" readOnly value={waStatus.webhook_url || ''} />
-                    <button className="btn btn-outline" onClick={() => { navigator.clipboard.writeText(waStatus.webhook_url); toast.success('Copied!') }}>Copy</button>
+                <div style={{ marginBottom: 24, padding: '20px', background: 'var(--bg-page, #FBF9F5)', borderRadius: 'var(--radius, 10px)', border: '1px solid var(--border, #eae5db)' }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary, #5f5a52)', marginBottom: 6, fontWeight: 500 }}>
+                    Linked Business WhatsApp Number
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary, #181614)', fontFamily: 'monospace' }}>
+                    {waStatus.phone_number || '+91 98XXX XX123'}
                   </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Message Statistics</h3>
-                  <div className="stats-grid">
-                    {(waStatus.message_stats || []).map(s => {
-                      return (
-                        <div key={s.status} className="stat-card">
-                          <div className="stat-label" style={{ textTransform: 'capitalize' }}>{s.status}</div>
-                          <div className="stat-value">{s.count}</div>
-                        </div>
-                      )
-                    })}
+
+                <div style={{ maxWidth: 480 }}>
+                  <label className="form-label" htmlFor="test-phone-input">Send Test Message</label>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <input
+                      id="test-phone-input"
+                      type="tel"
+                      className="form-control"
+                      placeholder="Recipient phone number (e.g. 9876543210)"
+                      value={testPhone}
+                      onChange={e => setTestPhone(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleSendTestMessage}
+                      disabled={sendingTest}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      {sendingTest ? 'Sending...' : 'Send test message'}
+                    </button>
                   </div>
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                    Sends a test notification to verify outbound WhatsApp delivery.
+                  </p>
                 </div>
               </div>
             ) : (
               <div>
-                <div className="alert alert-warning">
-                  WhatsApp is not configured. Add the required environment variables to enable.
-                </div>
-                <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Required Environment Variables</h3>
-                  <div style={{ background: '#1e293b', borderRadius: 10, padding: 20, fontFamily: 'monospace', fontSize: 13, color: '#94a3b8' }}>
-                    <div style={{ color: '#f59e0b' }}># Add these to your .env file</div>
-                    <div style={{ marginTop: 8 }}>WHATSAPP_ACCESS_TOKEN=<span style={{ color: '#86efac' }}>your_meta_access_token</span></div>
-                    <div>WHATSAPP_PHONE_NUMBER_ID=<span style={{ color: '#86efac' }}>your_phone_number_id</span></div>
-                    <div>WHATSAPP_WEBHOOK_VERIFY_TOKEN=<span style={{ color: '#86efac' }}>your_verify_token</span></div>
-                    <div>WHATSAPP_BUSINESS_ACCOUNT_ID=<span style={{ color: '#86efac' }}>your_waba_id</span></div>
-                    <div>WHATSAPP_APP_SECRET=<span style={{ color: '#86efac' }}>your_app_secret</span></div>
+                <div style={{ padding: '24px', background: 'var(--color-accent-light, #FDFBF7)', borderRadius: 'var(--radius, 10px)', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary, #181614)', marginBottom: 12 }}>
+                    {SUPPORT_CONFIG.notConnectedNotice}
                   </div>
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Setup Steps</h3>
-                  <ol style={{ paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 13.5, lineHeight: 2 }}>
-                    <li>Create a Meta Developer account at developers.facebook.com</li>
-                    <li>Create a new App and add WhatsApp Business API</li>
-                    <li>Get your Access Token and Phone Number ID from the dashboard</li>
-                    <li>Set up the webhook URL in Meta Console</li>
-                    <li>Add the environment variables and restart the server</li>
-                  </ol>
+                  <div style={{ fontSize: 13.5, color: 'var(--text-secondary, #5f5a52)', lineHeight: 1.8 }}>
+                    <div><strong>Email:</strong> <a href={`mailto:${SUPPORT_CONFIG.email}`} style={{ color: 'var(--color-accent, #C5A059)', textDecoration: 'none' }}>{SUPPORT_CONFIG.email}</a></div>
+                    <div><strong>Phone:</strong> {SUPPORT_CONFIG.phone}</div>
+                    <div><strong>WhatsApp Support:</strong> {SUPPORT_CONFIG.whatsapp}</div>
+                    <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>Support hours: {SUPPORT_CONFIG.hours}</div>
+                  </div>
                 </div>
               </div>
             )}

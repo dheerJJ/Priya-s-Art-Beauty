@@ -1,7 +1,11 @@
 'use strict';
 const request = require('supertest');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const app = require('../src/server');
+const pool = require('../src/db/pool');
 const { getSafePDFPath } = require('../src/services/pdfService');
 
 describe('Security Hardening Test Suite', () => {
@@ -217,6 +221,115 @@ describe('Security Hardening Test Suite', () => {
         .send(largePayload);
 
       expect(res.status).toBe(413);
+    });
+  });
+
+  describe('I. WhatsApp Settings Security & Secret Leak Prevention', () => {
+    const secret = process.env.JWT_SECRET || 'test_jwt_secret_must_be_long_enough_for_security';
+    let adminToken;
+    let staffToken;
+
+    beforeAll(async () => {
+      await pool.query(`
+        INSERT INTO salons (id, name, invoice_prefix, currency, tax_rate)
+        VALUES (1, 'Test Salon 1', 'TEST', 'INR', 0)
+        ON CONFLICT (id) DO NOTHING
+      `);
+      await pool.query(`
+        INSERT INTO users (id, name, email, password_hash, role, salon_id, is_active)
+        VALUES (1, 'Test Admin', 'testadmin@example.com', '$2a$12$e80yZ1/X/VnN96rX6tAeu.vC0t6d5Ew4Y.a5Q6r7S8T9U0V1W2X3Y', 'admin', 1, true)
+        ON CONFLICT (id) DO UPDATE SET role = 'admin', is_active = true
+      `);
+      await pool.query(`
+        INSERT INTO users (id, name, email, password_hash, role, salon_id, is_active)
+        VALUES (888, 'Test Staff', 'teststaff888@example.com', '$2a$12$e80yZ1/X/VnN96rX6tAeu.vC0t6d5Ew4Y.a5Q6r7S8T9U0V1W2X3Y', 'staff', 1, true)
+        ON CONFLICT (id) DO UPDATE SET role = 'staff', is_active = true
+      `);
+
+      adminToken = jwt.sign({ userId: 1, role: 'admin', salonId: 1 }, secret, { expiresIn: '1h' });
+      staffToken = jwt.sign({ userId: 888, role: 'staff', salonId: 1 }, secret, { expiresIn: '1h' });
+    });
+
+    it('should reject unauthenticated requests to /api/settings/whatsapp-status with 401', async () => {
+      const res = await request(app).get('/api/settings/whatsapp-status');
+      expect(res.status).toBe(401);
+    });
+
+    it('should reject non-admin (staff) requests to /api/settings/whatsapp-status with 403', async () => {
+      const res = await request(app)
+        .get('/api/settings/whatsapp-status')
+        .set('Authorization', `Bearer ${staffToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('should allow admin requests and return strictly boolean connected and masked phone_number', async () => {
+      const res = await request(app)
+        .get('/api/settings/whatsapp-status')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
+
+      const dataKeys = Object.keys(res.body.data);
+      // Must ONLY contain connected and phone_number
+      expect(dataKeys.sort()).toEqual(['connected', 'phone_number'].sort());
+      expect(typeof res.body.data.connected).toBe('boolean');
+
+      if (res.body.data.connected) {
+        expect(res.body.data.phone_number).toMatch(/XXX/);
+      } else {
+        expect(res.body.data.phone_number).toBeNull();
+      }
+
+      // Leak check: confirm NO sensitive fields or tokens in payload
+      const jsonStr = JSON.stringify(res.body).toLowerCase();
+      expect(jsonStr).not.toContain('access_token');
+      expect(jsonStr).not.toContain('app_secret');
+      expect(jsonStr).not.toContain('verify_token');
+      expect(jsonStr).not.toContain('phone_number_id');
+      expect(jsonStr).not.toContain('webhook_url');
+    });
+
+    it('should reject unauthenticated and staff requests to /api/settings/whatsapp-test', async () => {
+      const unauth = await request(app).post('/api/settings/whatsapp-test').send({ phone: '9999999999' });
+      expect(unauth.status).toBe(401);
+
+      const staff = await request(app)
+        .post('/api/settings/whatsapp-test')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ phone: '9999999999' });
+      expect(staff.status).toBe(403);
+    });
+
+    it('should reject test message for admin when WhatsApp is not configured without leaking errors', async () => {
+      const res = await request(app)
+        .post('/api/settings/whatsapp-test')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ phone: '9999999999' });
+
+      if (!res.body.success) {
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain('WhatsApp');
+      }
+    });
+
+    it('should verify that frontend build bundle contains NO WhatsApp secrets or env setup instructions', () => {
+      const distDir = path.resolve(__dirname, '../../frontend/dist/assets');
+      if (fs.existsSync(distDir)) {
+        const files = fs.readdirSync(distDir);
+        for (const file of files) {
+          if (file.endsWith('.js') || file.endsWith('.css')) {
+            const content = fs.readFileSync(path.join(distDir, file), 'utf8');
+            expect(content).not.toContain('WHATSAPP_ACCESS_TOKEN');
+            expect(content).not.toContain('WHATSAPP_PHONE_NUMBER_ID');
+            expect(content).not.toContain('WHATSAPP_APP_SECRET');
+            expect(content).not.toContain('WHATSAPP_WEBHOOK_VERIFY_TOKEN');
+            expect(content).not.toContain('your_meta_access_token');
+            expect(content).not.toContain('restart the server');
+          }
+        }
+      }
     });
   });
 });

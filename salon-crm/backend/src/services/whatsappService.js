@@ -269,8 +269,66 @@ async function retryWhatsApp(billId, salonId) {
   `, [billId, salonId]);
 }
 
+/**
+ * Send a test WhatsApp message to verify integration.
+ */
+async function sendTestMessage({ recipientPhone, salonName }) {
+  if (!isWhatsAppConfigured()) {
+    return {
+      success: false,
+      error: 'WhatsApp integration not configured.',
+    };
+  }
+
+  const { normalized: phone, valid, reason } = processPhone(recipientPhone);
+  if (!valid) {
+    return { success: false, error: `Invalid phone number: ${reason}` };
+  }
+
+  try {
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const accessToken = process.env.META_ACCESS_TOKEN;
+
+    const messageBody = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: phone,
+      type: 'text',
+      text: {
+        preview_url: false,
+        body: `Hello! This is a test notification from ${salonName || "Priya's Art Beauty & Makeup Academy"}. Your WhatsApp Business billing connection is active and operational.`,
+      },
+    };
+
+    const response = await fetch(
+      `${META_BASE_URL}/${phoneNumberId}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageBody),
+        timeout: 15000,
+      }
+    );
+
+    const responseData = await response.json();
+    if (!response.ok || responseData.error) {
+      const errorMsg = responseData.error?.message || `HTTP ${response.status}`;
+      return { success: false, error: `WhatsApp delivery failed: ${errorMsg}` };
+    }
+
+    const metaMessageId = responseData.messages?.[0]?.id;
+    return { success: true, messageId: metaMessageId };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   sendWhatsAppInvoice,
+  sendTestMessage,
   processWebhookStatus,
   isWhatsAppConfigured,
   retryWhatsApp,

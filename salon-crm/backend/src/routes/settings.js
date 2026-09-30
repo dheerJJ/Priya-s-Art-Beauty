@@ -4,7 +4,7 @@ const { body, param } = require('express-validator');
 const {
   getSalonSettings, updateSalonSettings,
   listStaff, createStaff, updateStaff,
-  getWhatsAppStatus,
+  getWhatsAppStatus, sendTestWhatsAppMessage,
 } = require('../controllers/settingsController');
 const { authenticate, requireRole } = require('../middleware/auth');
 const validate = require('../middleware/validate');
@@ -36,7 +36,10 @@ router.put('/staff/:id', requireRole('admin'), [
   body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
 ], validate, updateStaff);
 
-// WhatsApp status
-router.get('/whatsapp-status', getWhatsAppStatus);
+// WhatsApp management (admin only)
+router.get('/whatsapp-status', requireRole('admin'), getWhatsAppStatus);
+router.post('/whatsapp-test', requireRole('admin'), [
+  body('phone').optional().trim(),
+], validate, sendTestWhatsAppMessage);
 
 module.exports = router;

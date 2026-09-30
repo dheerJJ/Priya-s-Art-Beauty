@@ -116,8 +116,8 @@ export default function Login() {
         </div>
 
         <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
-          <a href="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'none', marginRight: 14 }}>Privacy Policy</a>
-          <a href="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms & Conditions</a>
+          <Link to="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'none', marginRight: 14 }}>Privacy Policy</Link>
+          <Link to="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms & Conditions</Link>
         </div>
       </div>
     </div>

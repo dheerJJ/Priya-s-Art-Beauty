@@ -4,26 +4,9 @@ const path = require('path');
 
 const { combine, timestamp, errors, json, colorize, simple } = winston.format;
 
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: combine(
-    timestamp(),
-    errors({ stack: true }),
-    json()
-  ),
-  transports: [
-    new winston.transports.Console({
-      format: process.env.NODE_ENV === 'production'
-        ? combine(timestamp(), json())
-        : combine(colorize(), simple()),
-    }),
-  ],
-});
-
-// Sanitize log data - never log secrets
 const SENSITIVE_KEYS = [
   'password', 'password_hash', 'token', 'access_token', 'meta_access_token',
-  'jwt', 'secret', 'api_key', 'app_secret',
+  'jwt', 'secret', 'api_key', 'app_secret', 'authorization',
 ];
 
 function sanitize(obj) {
@@ -40,6 +23,27 @@ function sanitize(obj) {
   }
   return clean;
 }
+
+const sanitizeFormat = winston.format((info) => {
+  return sanitize(info);
+})();
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: combine(
+    timestamp(),
+    errors({ stack: true }),
+    sanitizeFormat,
+    json()
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: process.env.NODE_ENV === 'production'
+        ? combine(timestamp(), sanitizeFormat, json())
+        : combine(sanitizeFormat, colorize(), simple()),
+    }),
+  ],
+});
 
 logger.sanitize = sanitize;
 

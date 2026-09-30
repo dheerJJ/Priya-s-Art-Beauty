@@ -6,6 +6,7 @@ const cors = require('cors');
 const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 
 const logger = require('./utils/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
@@ -28,12 +29,12 @@ app.disable('x-powered-by');
 // Validate critical environment settings
 function validateEnvironment() {
   const isProd = process.env.NODE_ENV === 'production';
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
   if (!secret || secret === 'change-this-to-a-secure-random-secret-in-production' || secret.length < 16) {
     if (isProd) {
-      throw new Error('FATAL: JWT_SECRET must be set to a secure secret in production (at least 16 chars).');
+      throw new Error('FATAL: JWT_ACCESS_SECRET must be set to a secure secret in production (at least 16 chars).');
     } else {
-      logger.warn('SECURITY WARNING: JWT_SECRET is using a default or short development value. Replace with a secure secret in production.');
+      logger.warn('SECURITY WARNING: JWT_ACCESS_SECRET is using a default or short development value. Replace with a secure secret in production.');
     }
   }
 }
@@ -119,6 +120,7 @@ app.use('/api/webhooks/whatsapp', express.raw({ type: 'application/json' }), (re
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(cookieParser());
 app.use(compression());
 
 // ==========================================

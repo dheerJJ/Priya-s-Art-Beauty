@@ -1,7 +1,15 @@
 'use strict';
 const express = require('express');
 const { body } = require('express-validator');
-const { login, register, getMe, changePassword } = require('../controllers/authController');
+const {
+  login,
+  register,
+  getMe,
+  changePassword,
+  refreshToken,
+  logout,
+  logoutAll,
+} = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const rateLimit = require('express-rate-limit');
@@ -12,6 +20,14 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
   message: { success: false, message: 'Too many login attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  message: { success: false, message: 'Too many refresh attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -40,6 +56,20 @@ router.post('/login',
   ],
   validate,
   login
+);
+
+router.post('/refresh',
+  refreshLimiter,
+  refreshToken
+);
+
+router.post('/logout',
+  logout
+);
+
+router.post('/logout-all',
+  authenticate,
+  logoutAll
 );
 
 router.post('/register',

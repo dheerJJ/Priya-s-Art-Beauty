@@ -2,6 +2,7 @@
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
 const logger = require('../utils/logger');
+const { verifyAccessToken } = require('../services/tokenService');
 
 /**
  * Authenticate requests using Bearer JWT token.
@@ -16,7 +17,7 @@ async function authenticate(req, res, next) {
     const token = authHeader.slice(7);
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      decoded = verifyAccessToken(token);
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
         return res.status(401).json({ success: false, message: 'Session expired, please login again' });

@@ -185,6 +185,12 @@ async function updateStaff(req, res, next) {
       RETURNING id, name, email, role, is_active
     `, params);
 
+    // Revoke all active sessions on password change or account disable
+    if (passwordUpdate || is_active === false) {
+      const { revokeAllUserTokens } = require('../services/tokenService');
+      await revokeAllUserTokens(id);
+    }
+
     return res.json({ success: true, data: result.rows[0] });
   } catch (err) {
     next(err);

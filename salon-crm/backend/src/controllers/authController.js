@@ -1,7 +1,15 @@
 'use strict';
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
+const {
+  generateAccessToken,
+  createRefreshTokenFamily,
+  rotateRefreshToken,
+  revokeRefreshToken,
+  revokeAllUserTokens,
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie,
+} = require('../services/tokenService');
 
 /**
  * POST /api/auth/login
@@ -37,12 +45,17 @@ async function login(req, res, next) {
       return res.status(401).json({ success: false, message: 'Account is deactivated' });
     }
 
-    // Generate JWT
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, salonId: user.salon_id },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
+    // Generate 15-minute access JWT
+    const accessToken = generateAccessToken(user);
+
+    // Create cryptographically secure refresh token family
+    const refreshTokenData = await createRefreshTokenFamily(user.id, {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+    });
+
+    // Deliver refresh token via HttpOnly, Secure, SameSite=Strict cookie
+    setRefreshTokenCookie(res, refreshTokenData.rawToken);
 
     // Log login
     await pool.query(
@@ -54,7 +67,7 @@ async function login(req, res, next) {
     return res.json({
       success: true,
       data: {
-        token,
+        token: accessToken,
         user: {
           id: user.id,
           name: user.name,
@@ -65,6 +78,82 @@ async function login(req, res, next) {
         },
       },
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/auth/refresh
+ * Validates, rotates refresh token, and returns fresh access token.
+ */
+async function refreshToken(req, res, next) {
+  try {
+    const rawToken = req.cookies?.refreshToken || req.body?.refreshToken;
+
+    if (!rawToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'No refresh token provided',
+      });
+    }
+
+    const rotationResult = await rotateRefreshToken(rawToken, {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+    });
+
+    if (!rotationResult.success) {
+      clearRefreshTokenCookie(res);
+      return res.status(rotationResult.status || 401).json({
+        success: false,
+        message: rotationResult.message,
+        reuseDetected: rotationResult.reuseDetected || false,
+      });
+    }
+
+    // Set rotated refresh token in HttpOnly cookie
+    setRefreshTokenCookie(res, rotationResult.newRawToken);
+
+    return res.json({
+      success: true,
+      data: {
+        token: rotationResult.accessToken,
+        user: rotationResult.user,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/auth/logout
+ * Revokes the presented refresh token and clears cookie.
+ */
+async function logout(req, res, next) {
+  try {
+    const rawToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    if (rawToken) {
+      await revokeRefreshToken(rawToken);
+    }
+
+    clearRefreshTokenCookie(res);
+    return res.json({ success: true, message: 'Logged out successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/auth/logout-all
+ * Revokes all refresh tokens for the authenticated user (sign out all devices).
+ */
+async function logoutAll(req, res, next) {
+  try {
+    await revokeAllUserTokens(req.user.id);
+    clearRefreshTokenCookie(res);
+    return res.json({ success: true, message: 'All devices signed out successfully' });
   } catch (err) {
     next(err);
   }
@@ -109,6 +198,10 @@ async function changePassword(req, res, next) {
       'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
       [newHash, req.user.id]
     );
+
+    // Revoke all active sessions on password change
+    await revokeAllUserTokens(req.user.id);
+    clearRefreshTokenCookie(res);
 
     await pool.query(
       `INSERT INTO audit_logs (salon_id, user_id, action, entity_type, entity_id)
@@ -180,20 +273,25 @@ async function register(req, res, next) {
       VALUES ($1, $2, 'admin_registered', 'user', $3)
     `, [salon.id, user.id, req.ip]);
 
+    // 7. Create refresh token family within transaction
+    const refreshTokenData = await createRefreshTokenFamily(user.id, {
+      userAgent: req.headers['user-agent'],
+      ip: req.ip,
+    }, client);
+
     await client.query('COMMIT');
 
-    // Generate JWT
-    const token = jwt.sign(
-      { userId: user.id, role: user.role, salonId: user.salon_id },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
+    // Generate 15-minute access JWT
+    const accessToken = generateAccessToken(user);
+
+    // Deliver refresh token via cookie
+    setRefreshTokenCookie(res, refreshTokenData.rawToken);
 
     return res.status(201).json({
       success: true,
       message: 'Admin account and salon created successfully',
       data: {
-        token,
+        token: accessToken,
         user: {
           id: user.id,
           name: user.name,
@@ -215,4 +313,12 @@ async function register(req, res, next) {
   }
 }
 
-module.exports = { login, register, getMe, changePassword };
+module.exports = {
+  login,
+  register,
+  getMe,
+  changePassword,
+  refreshToken,
+  logout,
+  logoutAll,
+};

@@ -321,6 +321,10 @@ async function generateInvoicePDF(bill) {
  */
 function getSafePDFPath(filename) {
   if (!filename || typeof filename !== 'string') return null;
+  if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    logger.warn('Path traversal attempt detected in PDF retrieval:', { filename });
+    return null;
+  }
   const safeName = path.basename(filename);
   const resolved = path.resolve(STORAGE_PATH, safeName);
   const resolvedStorage = path.resolve(STORAGE_PATH);
@@ -350,4 +354,4 @@ function pdfExists(filename) {
   return !!(pdfPath && fs.existsSync(pdfPath));
 }
 
-module.exports = { generateInvoicePDF, getPDFStream, pdfExists, STORAGE_PATH };
+module.exports = { generateInvoicePDF, getPDFStream, pdfExists, getSafePDFPath, STORAGE_PATH };

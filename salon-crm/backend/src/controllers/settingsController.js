@@ -140,11 +140,30 @@ async function updateStaff(req, res, next) {
     const { name, role, is_active, password } = req.body;
 
     const check = await pool.query(
-      'SELECT id FROM users WHERE id = $1 AND salon_id = $2',
+      'SELECT id, role, is_active FROM users WHERE id = $1 AND salon_id = $2',
       [id, req.salonId]
     );
     if (!check.rows.length) {
       return res.status(404).json({ success: false, message: 'Staff member not found' });
+    }
+
+    const currentStaff = check.rows[0];
+
+    // Prevent deactivating or demoting the last active admin
+    if (
+      currentStaff.role === 'admin' &&
+      (is_active === false || (role && role !== 'admin'))
+    ) {
+      const adminCountRes = await pool.query(
+        "SELECT COUNT(*) FROM users WHERE salon_id = $1 AND role = 'admin' AND is_active = true AND id != $2",
+        [req.salonId, id]
+      );
+      if (parseInt(adminCountRes.rows[0].count) === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot deactivate or demote the last remaining active administrator',
+        });
+      }
     }
 
     let passwordUpdate = '';

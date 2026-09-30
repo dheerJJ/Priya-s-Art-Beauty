@@ -24,7 +24,7 @@ async function login(req, res, next) {
     const user = result.rows[0];
 
     // Use constant-time comparison even if user not found (prevent timing attacks)
-    const dummyHash = '$2b$12$invalidhashfortimingattackprevention123456789';
+    const dummyHash = '$2a$12$e80yZ1/X/VnN96rX6tAeu.vC0t6d5Ew4Y.a5Q6r7S8T9U0V1W2X3Y';
     const passwordMatch = await bcrypt.compare(
       password,
       user ? user.password_hash : dummyHash

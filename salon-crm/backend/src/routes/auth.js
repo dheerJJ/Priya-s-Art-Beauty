@@ -16,6 +16,14 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const passwordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { success: false, message: 'Too many password update attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 router.post('/login',
   loginLimiter,
   [
@@ -30,6 +38,7 @@ router.get('/me', authenticate, getMe);
 
 router.post('/change-password',
   authenticate,
+  passwordLimiter,
   [
     body('currentPassword').notEmpty().withMessage('Current password is required'),
     body('newPassword')

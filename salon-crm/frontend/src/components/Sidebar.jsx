@@ -45,10 +45,14 @@ export default function Sidebar({ isOpen, onClose }) {
   const { user, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
 
-  function handleLogout() {
-    logout()
-    toast.success('Logged out successfully')
-    navigate('/login')
+  async function handleLogout() {
+    try {
+      await logout()
+      toast.success('Logged out successfully')
+      navigate('/login')
+    } catch {
+      navigate('/login')
+    }
   }
 
   return (

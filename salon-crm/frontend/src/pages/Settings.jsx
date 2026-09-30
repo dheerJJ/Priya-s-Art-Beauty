@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../api/client'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/useAuth'
 import SUPPORT_CONFIG from '../config/support'
 
 export default function Settings() {
-  const { isAdmin } = useAuth()
+  const { isAdmin, logoutAll } = useAuth()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('salon')
+  const [signingOutAll, setSigningOutAll] = useState(false)
 
   // Salon settings
   const [salonForm, setSalonForm] = useState({})
@@ -65,6 +68,22 @@ export default function Settings() {
       toast.error(msg)
     } finally {
       setSendingTest(false)
+    }
+  }
+
+  async function handleSignOutAllDevices() {
+    if (!window.confirm('Are you sure you want to sign out from all devices? All active sessions will be terminated and you will need to sign in again.')) {
+      return
+    }
+    setSigningOutAll(true)
+    try {
+      await logoutAll()
+      toast.success('All devices signed out successfully')
+      navigate('/login')
+    } catch {
+      toast.error('Failed to sign out all devices')
+    } finally {
+      setSigningOutAll(false)
     }
   }
 
@@ -191,6 +210,29 @@ export default function Settings() {
               </button>
             </div>
           </form>
+
+          {isAdmin && (
+            <div className="card" style={{ marginTop: 24 }}>
+              <div className="card-header">
+                <span className="card-title">Security & Sessions</span>
+              </div>
+              <div className="card-body">
+                <p style={{ color: 'var(--text-secondary, #5f5a52)', fontSize: 13.5, marginBottom: 16 }}>
+                  Terminate all active sessions across all devices for your administrator account. You will be redirected to the sign in page.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ color: 'var(--color-danger, #ef4444)', borderColor: 'rgba(239, 68, 68, 0.35)' }}
+                  onClick={handleSignOutAllDevices}
+                  disabled={signingOutAll}
+                  id="sign-out-all-devices-btn"
+                >
+                  {signingOutAll ? 'Signing out...' : 'Sign out all devices'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

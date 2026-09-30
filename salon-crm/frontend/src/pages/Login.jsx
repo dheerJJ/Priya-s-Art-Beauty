@@ -61,7 +61,7 @@ export default function Login() {
               id="email"
               type="email"
               className="form-control"
-              placeholder="admin@glamoursalon.in"
+              placeholder="Enter your email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
@@ -108,13 +108,7 @@ export default function Login() {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, padding: '16px', background: '#f8fafc', borderRadius: 10, fontSize: 12.5, color: 'var(--text-secondary)' }}>
-          <strong style={{ display: 'block', marginBottom: 6, color: 'var(--text-primary)' }}>Demo Credentials</strong>
-          <div>Admin: <code>admin@glamoursalon.in</code> / <code>Admin@123</code></div>
-          <div style={{ marginTop: 4 }}>Staff: <code>staff@glamoursalon.in</code> / <code>Staff@123</code></div>
-        </div>
-
-        <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
+        <div style={{ marginTop: 24, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
           <a href="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'none', marginRight: 14 }}>Privacy Policy</a>
           <a href="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms & Conditions</a>
         </div>

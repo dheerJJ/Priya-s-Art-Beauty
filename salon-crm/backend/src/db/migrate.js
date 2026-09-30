@@ -214,9 +214,14 @@ async function migrate() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_salon_id ON audit_logs(salon_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);`);
-    console.log('  [10/12] audit_logs table OK');
+    console.log('  [10/13] audit_logs table OK');
 
-    // 012 - Update timestamp trigger function (with explicit search_path)
+    // 012 - Refresh tokens table
+    const refreshTokensMigration = require('./migrations/002_create_refresh_tokens');
+    await refreshTokensMigration.up(client);
+    console.log('  [11/13] refresh_tokens table OK');
+
+    // 013 - Update timestamp trigger function (with explicit search_path)
     await client.query(`
       CREATE OR REPLACE FUNCTION update_updated_at_column()
       RETURNS TRIGGER AS $$
@@ -245,10 +250,10 @@ async function migrate() {
         END$$;
       `);
     }
-    console.log('  [11/12] triggers OK');
+    console.log('  [12/13] triggers OK');
 
     await client.query('COMMIT');
-    console.log('  [12/12] transaction committed');
+    console.log('  [13/13] transaction committed');
     console.log('✓ All migrations complete');
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) { /* ignore rollback error */ }

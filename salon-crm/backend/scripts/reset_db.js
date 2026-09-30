@@ -3,6 +3,7 @@ require('dotenv').config();
 const pool = require('../src/db/pool');
 
 const TABLES = [
+  'refresh_tokens',
   'audit_logs',
   'whatsapp_messages',
   'invoices',

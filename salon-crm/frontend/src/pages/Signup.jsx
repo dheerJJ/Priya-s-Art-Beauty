@@ -106,7 +106,7 @@ export default function Signup() {
             </div>
 
             <div className="form-group">
-              <label className="form-label" htmlFor="phone">Contact Phone</label>
+              <label className="form-label" htmlFor="phone">Contact Phone <span style={{ color: '#ef4444' }}>*</span></label>
               <input
                 id="phone"
                 name="phone"

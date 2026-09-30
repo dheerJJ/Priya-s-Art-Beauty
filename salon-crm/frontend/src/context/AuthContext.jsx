@@ -2,6 +2,31 @@ import { useState, useEffect } from 'react'
 import api, { setAccessToken } from '../api/client'
 import { AuthContext } from './auth-context'
 
+// Module-level deduplication promise for restoring session on page load/refresh.
+// Prevents race conditions from React 18 StrictMode double-mounting or concurrent re-renders
+// which would otherwise trigger refresh token reuse detection and log the user out.
+let activeRestorePromise = null
+
+function restoreSessionOnce() {
+  if (!activeRestorePromise) {
+    activeRestorePromise = api
+      .post('/auth/refresh')
+      .then((res) => {
+        return res.data?.data || null
+      })
+      .catch(() => {
+        return null
+      })
+      .finally(() => {
+        // Retain the promise for 2.5s to absorb StrictMode double-mount or rapid re-renders
+        setTimeout(() => {
+          activeRestorePromise = null
+        }, 2500)
+      })
+  }
+  return activeRestorePromise
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -16,41 +41,39 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('user')
     } catch (_) {}
 
-    async function restoreSession() {
-      // Check if a session was previously established before attempting silent restore.
-      // This prevents unnecessary 401 console noise on first visit or when logged out.
-      const hasSession = localStorage.getItem('has_session') === 'true'
-      if (!hasSession) {
-        if (isMounted) {
-          setLoading(false)
-        }
-        return
-      }
+    const publicRoutes = ['/login', '/signup', '/register', '/privacy', '/terms']
+    const isPublicRoute = publicRoutes.some((p) => window.location.pathname.startsWith(p))
+    const hasSessionIndicator = localStorage.getItem('has_session') === 'true'
 
-      try {
-        const res = await api.post('/auth/refresh')
-        if (isMounted && res.data?.data) {
-          const { token, user: userData } = res.data.data
-          setAccessToken(token)
-          setUser(userData)
-        }
-      } catch (_) {
-        // No active refresh session or invalid token
-        try {
-          localStorage.removeItem('has_session')
-        } catch (_) {}
-        if (isMounted) {
-          setAccessToken(null)
-          setUser(null)
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
-      }
+    // If on a public route without a session indicator, don't ping /refresh
+    if (isPublicRoute && !hasSessionIndicator) {
+      setLoading(false)
+      return
     }
 
-    restoreSession()
+    restoreSessionOnce()
+      .then((sessionData) => {
+        if (!isMounted) return
+
+        if (sessionData?.token && sessionData?.user) {
+          setAccessToken(sessionData.token)
+          setUser(sessionData.user)
+          try {
+            localStorage.setItem('has_session', 'true')
+          } catch (_) {}
+        } else {
+          setAccessToken(null)
+          setUser(null)
+          try {
+            localStorage.removeItem('has_session')
+          } catch (_) {}
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false)
+        }
+      })
 
     return () => {
       isMounted = false

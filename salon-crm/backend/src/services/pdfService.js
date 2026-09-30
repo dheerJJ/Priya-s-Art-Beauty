@@ -316,11 +316,27 @@ async function generateInvoicePDF(bill) {
 }
 
 /**
+ * Resolve a sanitized, safe path strictly within STORAGE_PATH.
+ * Prevents directory traversal attacks via path.basename and path containment checks.
+ */
+function getSafePDFPath(filename) {
+  if (!filename || typeof filename !== 'string') return null;
+  const safeName = path.basename(filename);
+  const resolved = path.resolve(STORAGE_PATH, safeName);
+  const resolvedStorage = path.resolve(STORAGE_PATH);
+  if (!resolved.startsWith(resolvedStorage)) {
+    logger.warn('Path traversal attempt detected in PDF retrieval:', { filename });
+    return null;
+  }
+  return resolved;
+}
+
+/**
  * Get a readable stream for a stored PDF
  */
 function getPDFStream(filename) {
-  const pdfPath = path.join(STORAGE_PATH, filename);
-  if (!fs.existsSync(pdfPath)) {
+  const pdfPath = getSafePDFPath(filename);
+  if (!pdfPath || !fs.existsSync(pdfPath)) {
     return null;
   }
   return fs.createReadStream(pdfPath);
@@ -330,8 +346,8 @@ function getPDFStream(filename) {
  * Check if a PDF file exists
  */
 function pdfExists(filename) {
-  const pdfPath = path.join(STORAGE_PATH, filename);
-  return fs.existsSync(pdfPath);
+  const pdfPath = getSafePDFPath(filename);
+  return !!(pdfPath && fs.existsSync(pdfPath));
 }
 
 module.exports = { generateInvoicePDF, getPDFStream, pdfExists, STORAGE_PATH };

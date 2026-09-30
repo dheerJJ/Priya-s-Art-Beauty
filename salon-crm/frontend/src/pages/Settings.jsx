@@ -4,6 +4,8 @@ import api from '../api/client'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/useAuth'
 import SUPPORT_CONFIG from '../config/support'
+import BRANDING_CONFIG from '../config/branding'
+import CreditLine from '../components/CreditLine'
 
 export default function Settings() {
   const { isAdmin, logoutAll } = useAuth()
@@ -144,6 +146,7 @@ export default function Settings() {
         <button className={`tab${tab === 'salon' ? ' active' : ''}`} onClick={() => setTab('salon')}>Salon Info</button>
         {isAdmin && <button className={`tab${tab === 'staff' ? ' active' : ''}`} onClick={() => setTab('staff')}>Staff</button>}
         {isAdmin && <button className={`tab${tab === 'whatsapp' ? ' active' : ''}`} onClick={() => setTab('whatsapp')}>WhatsApp</button>}
+        <button className={`tab${tab === 'about' ? ' active' : ''}`} onClick={() => setTab('about')}>About</button>
       </div>
 
       {/* Salon Settings */}
@@ -373,6 +376,50 @@ export default function Settings() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* About Tab */}
+      {tab === 'about' && (
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">About Application</span>
+          </div>
+          <div className="card-body">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 24 }}>
+              <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius, 10px)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Application</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{BRANDING_CONFIG.appName}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Salon CRM & WhatsApp Billing Management System</div>
+              </div>
+
+              <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius, 10px)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Version</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>v{BRANDING_CONFIG.appVersion}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Production build</div>
+              </div>
+            </div>
+
+            <div style={{ padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius, 10px)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 24 }}>
+              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: 8 }}>Attribution</div>
+              <div style={{ fontSize: 13.5, color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }}>
+                <CreditLine style={{ fontSize: 13.5, textAlign: 'left' }} />
+              </div>
+            </div>
+
+            <div style={{ padding: '20px', background: 'var(--color-accent-light, rgba(197, 160, 89, 0.05))', borderRadius: 'var(--radius, 10px)', border: '1px solid rgba(197, 160, 89, 0.25)' }}>
+              <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-accent, #C5A059)', fontWeight: 600, marginBottom: 8 }}>Support & Technical Contact</div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                For technical assistance, billing queries, or system integrations, contact support:
+              </p>
+              <div style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+                <div><strong>Email:</strong> <a href={`mailto:${SUPPORT_CONFIG.email}`} style={{ color: 'var(--color-accent, #C5A059)', textDecoration: 'none' }}>{SUPPORT_CONFIG.email}</a></div>
+                <div><strong>Phone:</strong> {SUPPORT_CONFIG.phone}</div>
+                <div><strong>WhatsApp:</strong> {SUPPORT_CONFIG.whatsapp}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>Hours: {SUPPORT_CONFIG.hours}</div>
+              </div>
+            </div>
           </div>
         </div>
       )}

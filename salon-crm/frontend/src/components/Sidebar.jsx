@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import toast from 'react-hot-toast'
+import CreditLine from './CreditLine'
 
 const navItems = [
   { label: 'Main', section: true },
@@ -128,6 +129,9 @@ export default function Sidebar({ isOpen, onClose }) {
           <button onClick={handleLogout} className="btn btn-outline w-full" style={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.15)', fontSize: 13 }}>
             Sign Out
           </button>
+          <div style={{ marginTop: 14, textAlign: 'center' }}>
+            <CreditLine mutedColor="rgba(255, 255, 255, 0.35)" />
+          </div>
         </div>
       </aside>
     </>

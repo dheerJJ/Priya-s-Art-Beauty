@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
 import toast from 'react-hot-toast'
+import CreditLine from '../components/CreditLine'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -124,6 +125,10 @@ export default function Login() {
         <div style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: 'var(--text-muted)' }}>
           <Link to="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'none', marginRight: 14 }}>Privacy Policy</Link>
           <Link to="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}>Terms & Conditions</Link>
+        </div>
+
+        <div style={{ marginTop: 24, textAlign: 'center', borderTop: '1px solid rgba(197, 160, 89, 0.12)', paddingTop: 16 }}>
+          <CreditLine mutedColor="var(--text-muted, rgba(250, 246, 237, 0.4))" />
         </div>
       </div>
     </div>

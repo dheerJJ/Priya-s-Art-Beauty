@@ -272,7 +272,7 @@ async function createBill(req, res, next) {
       },
     });
   } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore rollback error */ }
     logger.error('Create bill error:', { error: err.message });
     next(err);
   } finally {

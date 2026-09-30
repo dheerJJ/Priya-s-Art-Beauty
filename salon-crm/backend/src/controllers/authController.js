@@ -2,7 +2,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db/pool');
-const logger = require('../utils/logger');
 
 /**
  * POST /api/auth/login

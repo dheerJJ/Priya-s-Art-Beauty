@@ -1,6 +1,4 @@
 'use strict';
-const pool = require('../db/pool');
-const logger = require('../utils/logger');
 
 /**
  * Generate a unique, sequential invoice number for a salon.

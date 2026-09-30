@@ -36,7 +36,7 @@ async function sendWhatsAppInvoice({
   salonId,
   recipientPhone,
   billData,
-  pdfPath,
+  _pdfPath,
   templateName,
 }) {
   // Validate and normalize phone

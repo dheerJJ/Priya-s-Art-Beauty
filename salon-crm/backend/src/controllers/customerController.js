@@ -1,6 +1,5 @@
 'use strict';
 const pool = require('../db/pool');
-const logger = require('../utils/logger');
 const { processPhone } = require('../utils/phoneUtils');
 
 const { escapeLikeWildcards } = require('../utils/dbUtils');

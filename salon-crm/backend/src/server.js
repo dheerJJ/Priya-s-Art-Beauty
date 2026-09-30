@@ -6,7 +6,6 @@ const cors = require('cors');
 const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
 
 const logger = require('./utils/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');

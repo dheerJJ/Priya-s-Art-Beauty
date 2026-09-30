@@ -251,7 +251,7 @@ async function migrate() {
     console.log('  [12/12] transaction committed');
     console.log('✓ All migrations complete');
   } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
+    try { await client.query('ROLLBACK'); } catch (_) { /* ignore rollback error */ }
     console.error('Migration failed:', err.message);
     throw err;
   } finally {

@@ -1,0 +1,18 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true,
+    "jest": true
+  },
+  "extends": "eslint:recommended",
+  "parserOptions": {
+    "ecmaVersion": 12
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^(next|_)" }],
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-buffer-constructor": "error"
+  }
+}

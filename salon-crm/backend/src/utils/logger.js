@@ -1,6 +1,5 @@
 'use strict';
 const winston = require('winston');
-const path = require('path');
 
 const { combine, timestamp, errors, json, colorize, simple } = winston.format;
 

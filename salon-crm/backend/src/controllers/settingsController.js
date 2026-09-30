@@ -1,7 +1,6 @@
 'use strict';
 const pool = require('../db/pool');
 const bcrypt = require('bcryptjs');
-const logger = require('../utils/logger');
 
 /**
  * GET /api/settings/salon

@@ -17,7 +17,7 @@ const pool = new Pool({
 // Configure session hardening when client connects
 pool.on('connect', (client) => {
   // Guard against idle transactions holding row locks indefinitely
-  client.query('SET idle_in_transaction_session_timeout = 15000').catch((err) => {
+  client.query('SET idle_in_transaction_session_timeout = 15000').catch((_err) => {
     // Non-fatal if setting fails on certain postgres variants
   });
 });

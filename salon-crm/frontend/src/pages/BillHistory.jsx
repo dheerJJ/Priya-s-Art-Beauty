@@ -4,6 +4,22 @@ import api from '../api/client'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 
+import Dropdown from '../components/Dropdown'
+
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Status' },
+  { value: 'paid', label: 'Paid', dot: '#10b981' },
+  { value: 'pending', label: 'Pending', dot: '#d97706' },
+  { value: 'partial', label: 'Partial', dot: '#3b82f6' },
+]
+
+const PAYMENT_OPTIONS = [
+  { value: '', label: 'All Methods' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'upi', label: 'UPI' },
+  { value: 'card', label: 'Card' },
+]
+
 const WA_STATUS_MAP = {
   queued:    { cls: 'badge-warning', label: 'Queued' },
   sent:      { cls: 'badge-info',    label: 'Sent' },
@@ -84,18 +100,18 @@ export default function BillHistory() {
               <svg className="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               <input className="form-control" placeholder="Search by invoice or customer..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
             </div>
-            <select className="form-control" style={{ width: 130 }} value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1) }}>
-              <option value="">All Status</option>
-              <option value="paid">Paid</option>
-              <option value="pending">Pending</option>
-              <option value="partial">Partial</option>
-            </select>
-            <select className="form-control" style={{ width: 120 }} value={filterPayment} onChange={e => { setFilterPayment(e.target.value); setPage(1) }}>
-              <option value="">All Methods</option>
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-              <option value="card">Card</option>
-            </select>
+            <Dropdown
+              options={STATUS_OPTIONS}
+              value={filterStatus}
+              onChange={e => { setFilterStatus(e.target.value); setPage(1) }}
+              style={{ width: 135 }}
+            />
+            <Dropdown
+              options={PAYMENT_OPTIONS}
+              value={filterPayment}
+              onChange={e => { setFilterPayment(e.target.value); setPage(1) }}
+              style={{ width: 135 }}
+            />
             <input type="date" className="form-control" style={{ width: 140 }} value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1) }} />
             <input type="date" className="form-control" style={{ width: 140 }} value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1) }} />
           </div>

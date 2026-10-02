@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import api from '../api/client'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/useAuth'
+import Dropdown from '../components/Dropdown'
+
+const ACTIVE_STATUS_OPTIONS = [
+  { value: 'true', label: 'Active', dot: '#10b981' },
+  { value: 'false', label: 'Inactive', dot: '#94a3b8' },
+  { value: '', label: 'All Status' },
+]
 
 function ServiceModal({ service, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -171,11 +178,12 @@ export default function Services() {
                 <span key={cat} className={`tag${filterCategory === cat ? ' active' : ''}`} onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)}>{cat}</span>
               ))}
             </div>
-            <select className="form-control" style={{ width: 120 }} value={filterActive} onChange={e => setFilterActive(e.target.value)}>
-              <option value="true">Active</option>
-              <option value="false">Inactive</option>
-              <option value="">All</option>
-            </select>
+            <Dropdown
+              options={ACTIVE_STATUS_OPTIONS}
+              value={filterActive}
+              onChange={e => setFilterActive(e.target.value)}
+              style={{ width: 130 }}
+            />
           </div>
         </div>
       </div>

@@ -6,6 +6,18 @@ import { useAuth } from '../context/useAuth'
 import SUPPORT_CONFIG from '../config/support'
 import BRANDING_CONFIG from '../config/branding'
 import CreditLine from '../components/CreditLine'
+import Dropdown from '../components/Dropdown'
+
+const CURRENCY_OPTIONS = [
+  { value: 'INR', label: 'INR - Indian Rupee' },
+  { value: 'USD', label: 'USD - US Dollar' },
+  { value: 'GBP', label: 'GBP - British Pound' },
+]
+
+const STAFF_ROLE_OPTIONS = [
+  { value: 'staff', label: 'Staff' },
+  { value: 'admin', label: 'Admin' },
+]
 
 export default function Settings() {
   const { isAdmin, logoutAll } = useAuth()
@@ -189,11 +201,11 @@ export default function Settings() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Currency</label>
-                  <select className="form-control" value={salonForm.currency || 'INR'} onChange={e => setSalonForm(f => ({...f, currency: e.target.value}))}>
-                    <option value="INR">INR - Indian Rupee</option>
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="GBP">GBP - British Pound</option>
-                  </select>
+                  <Dropdown
+                    options={CURRENCY_OPTIONS}
+                    value={salonForm.currency || 'INR'}
+                    onChange={e => setSalonForm(f => ({...f, currency: e.target.value}))}
+                  />
                 </div>
                 <div className="form-group" style={{ gridColumn: '1/-1' }}>
                   <label className="form-label">Invoice Footer</label>
@@ -267,10 +279,11 @@ export default function Settings() {
                     </div>
                     <div className="form-group">
                       <label className="form-label">Role</label>
-                      <select className="form-control" value={staffForm.role} onChange={e => setStaffForm(f => ({...f, role: e.target.value}))}>
-                        <option value="staff">Staff</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      <Dropdown
+                        options={STAFF_ROLE_OPTIONS}
+                        value={staffForm.role}
+                        onChange={e => setStaffForm(f => ({...f, role: e.target.value}))}
+                      />
                     </div>
                   </div>
                   <button type="submit" className="btn btn-primary" disabled={addingStaff}>

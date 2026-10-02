@@ -2,6 +2,18 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../api/client'
 import toast from 'react-hot-toast'
+import Dropdown from '../components/Dropdown'
+
+const DISCOUNT_OPTIONS = [
+  { value: 'fixed', label: 'Fixed Rs.' },
+  { value: 'percent', label: 'Percent %' },
+]
+
+const PAYMENT_STATUS_OPTIONS = [
+  { value: 'paid', label: 'Paid', dot: '#10b981' },
+  { value: 'pending', label: 'Pending', dot: '#d97706' },
+  { value: 'partial', label: 'Partial', dot: '#3b82f6' },
+]
 
 function formatCurrency(amount) {
   return `Rs. ${Number(amount || 0).toFixed(2)}`
@@ -319,21 +331,21 @@ export default function Billing() {
                       />
                     </div>
                     {customerSuggestions.length > 0 && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)', zIndex: 50, marginTop: 4 }}>
+                      <div className="custom-dropdown-menu" style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'white', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow-lg)', zIndex: 100, padding: '4px', maxHeight: '240px', overflowY: 'auto' }}>
                         {customerSuggestions.map(c => (
                           <div
                             key={c.id}
                             onClick={() => selectCustomer(c)}
-                            style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, borderBottom: '1px solid var(--border)' }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                            style={{ padding: '8px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, borderRadius: 'var(--radius-sm)', transition: 'background 0.12s ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#FDFBF7'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                           >
-                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--color-accent)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>
+                            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(197, 160, 89, 0.15)', color: '#87671f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12 }}>
                               {c.name[0].toUpperCase()}
                             </div>
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{c.name}</div>
-                              <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>+{c.phone}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+                              <div style={{ color: 'var(--text-muted)', fontSize: 11.5 }}>+{c.phone}</div>
                             </div>
                           </div>
                         ))}
@@ -452,11 +464,13 @@ export default function Billing() {
             {/* Discount */}
             <div style={{ marginBottom: 14 }}>
               <label className="form-label">Discount</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <select className="form-control" style={{ width: 100 }} value={discountType} onChange={e => setDiscountType(e.target.value)}>
-                  <option value="fixed">Fixed Rs.</option>
-                  <option value="percent">Percent %</option>
-                </select>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Dropdown
+                  options={DISCOUNT_OPTIONS}
+                  value={discountType}
+                  onChange={e => setDiscountType(e.target.value)}
+                  style={{ width: 125, flexShrink: 0 }}
+                />
                 <input
                   type="number"
                   className="form-control"
@@ -500,11 +514,11 @@ export default function Billing() {
 
             <div style={{ marginBottom: 14 }}>
               <label className="form-label">Payment Status</label>
-              <select className="form-control" value={paymentStatus} onChange={e => setPaymentStatus(e.target.value)}>
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-                <option value="partial">Partial</option>
-              </select>
+              <Dropdown
+                options={PAYMENT_STATUS_OPTIONS}
+                value={paymentStatus}
+                onChange={e => setPaymentStatus(e.target.value)}
+              />
             </div>
 
             <div style={{ marginBottom: 14 }}>
